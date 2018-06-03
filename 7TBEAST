@@ -21,7 +21,7 @@ then
  echo "Usage: 7TBEAST bids_dir output_dir {participant,group} <optional arguments>"
  echo "          [--participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL...]]"
  echo "          [--matching_T1w MATCHING_STRING]"
- echo "          [--ICBM152-2009c_path MATCHING_STRING]"
+ echo "          [--ICBM2009c_path MATCHING_STRING]"
  echo "          [--7TBEAST_path MATCHING_STRING]"
  echo "          [--n_cpus] NCPUS (not used currently; default: 8) "
  echo ""
