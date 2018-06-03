@@ -1,0 +1,307 @@
+#!/bin/bash
+# prepT2space: preprocessing for 3D T2 SPACE data (7T Siemens scanner)
+#   Prototyped by yxiao, May 31, 2018
+#
+# testdir: ~/graham/GitHub/7TBEAST/sandbox
+
+# test command line on graham (regularInteractive --> neurogliaMincShell): ~/GitHub/7TBEAST/7TBEAST ~/projects/rrg-akhanf/cfmm-bids/Khan/SNSX_7T/derivatives/gradcorrect/ ~/GitHub/prepT2space/sandbox/test/ participant --participant_label=sub-C016
+
+function die {
+ echo $1 >&2
+ exit 1
+}
+
+matching_T2w=
+participant_label=
+matching_T1w=
+n_cpus=8
+
+if [ "$#" -lt 4 ]
+then
+ echo "Usage: 7TBEAST bids_dir output_dir {participant,group} <optional arguments>"
+ echo "          [--participant_label PARTICIPANT_LABEL [PARTICIPANT_LABEL...]]"
+ echo "          [--matching_T1w MATCHING_STRING]"
+ echo "          [--ICBM152-2009c_path MATCHING_STRING]"
+ echo "          [--7TBEAST_path MATCHING_STRING]"
+ echo "          [--n_cpus] NCPUS (not used currently; default: 8) "
+ echo ""
+ exit 1
+fi
+
+
+in_bids=$1
+out_folder=$2
+analysis_level=$3
+
+
+shift 3
+
+######################################################################################
+# parameter initialization
+######################################################################################
+while :; do
+      case $1 in
+     -h|-\?|--help)
+	     usage
+            exit
+              ;;
+     --n_cpus )       # takes an option argument; ensure it has been specified.
+          if [ "$2" ]; then
+                n_cpus=$2
+                  shift
+	      else
+              die 'error: "--n_cpus" requires a non-empty option argument.'
+            fi
+              ;;
+      --ICBM152-2009c_path )       # takes an option argument; ensure it has been specified.
+            if [ "$2" ]; then
+               scratch_dir=$2
+               shift
+            else
+               die 'error: "-w" requires ICBM2009c atlas.'
+            fi
+                       ;;
+     --participant_label )       # takes an option argument; ensure it has been specified.
+          if [ "$2" ]; then
+                participant_label=$2
+                  shift
+	      else
+              die 'error: "--participant" requires a non-empty option argument.'
+            fi
+              ;;
+     --participant_label=?*)
+          participant_label=${1#*=} # delete everything up to "=" and assign the remainder.
+            ;;
+          --participant_label=)         # handle the case of an empty --participant=
+         die 'error: "--participant_label" requires a non-empty option argument.'
+          ;;
+     --matching_T1w )       # takes an option argument; ensure it has been specified.
+          if [ "$2" ]; then
+                matching_T1w=$2
+                  shift
+	      else
+              die 'error: "--matching_T1w" requires a non-empty option argument.'
+            fi
+              ;;
+     --matching_T1w=?*)
+          matching_T1w=${1#*=} # delete everything up to "=" and assign the remainder.
+            ;;
+          --matching_T1w=)         # handle the case of an empty --acq=
+         die 'error: "--matching_T2w" requires a non-empty option argument.'
+          ;;
+
+
+      -?*)
+            printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
+              ;;
+     *)               # Default case: No more options, so break out of the loop.
+          break
+    esac
+
+ shift
+  done
+
+
+shift $((OPTIND-1))
+
+
+echo matching_T2w=$matching_T1w
+echo participant_label=$participant_label
+
+if [ -e $in_bids ]
+then
+	in_bids=`realpath $in_bids`
+else
+	echo "ERROR: bids_dir $in_bids does not exist!"
+	exit 1
+fi
+
+
+if [ "$analysis_level" = "participant" ]
+then
+ echo " running participant level analysis"
+ else
+  echo "only participant level analysis is enabled"
+  exit 0
+fi
+
+participants=$in_bids/participants.tsv
+
+work_folder=$out_folder/work
+derivatives=$out_folder #bids derivatives
+
+echo mkdir -p $work_folder $derivatives
+mkdir -p $work_folder $derivatives
+
+pushd $work_folder
+echo $participants
+
+
+if [ -n "$matching_T1w" ]
+then
+  searchstring_T1w=\*${matching_T1w}\*MP2RAGE*T1w.nii*
+  searchstring_T1w_brainmask=\*${matching_T1w}\*MP2RAGE*T1w_brainmask.nii*
+else
+  searchstring_T1w=*MP2RAGE*T1w.nii*
+  searchstring_T1w_brainmask=*MP2RAGE*T1w_brainmask.nii*
+fi
+
+if [ -n "$participant_label" ]
+then
+subjlist=`echo $participant_label | sed  's/,/\ /g'`
+else
+subjlist=`tail -n +2 $participants | awk '{print $1}'`
+fi
+
+echo $subjlist
+
+for subj in $subjlist
+do
+
+######################################################################################
+# variable initialization (template: prepdwi)
+######################################################################################
+
+#add on sub- if not exists
+if [ ! "${subj:0:4}" = "sub-" ]
+then
+  subj="sub-$subj"
+fi
+
+subj_work_dir=$work_folder/$subj/
+subj_final_dir=$derivatives/$subj/anat
+
+mkdir -p $subj_work_dir # for intermediate files
+mkdir -p $subj_final_dir # for final output
+
+# Input T1w
+N_T1w=`eval ls $in_bids/$subj/anat/${subj}${searchstring_T1w} | wc -l`
+T1w=`eval ls $in_bids/$subj/anat/${subj}${searchstring_T1w} | head -n 1` # default is the first in the list
+echo N_T1w=$N_T1w
+echo Found $N_T1w matching T1w, using all:
+eval ls $in_bids/$subj/anat/${subj}${searchstring_T1w}
+
+
+
+######################################################################################
+# core pipeline functionality
+######################################################################################
+
+#############
+## outputs ##
+#############
+
+# Step 1
+T1w_thr0=$subj_work_dir/${subj}_thr0_T1w.nii.gz
+T1w_nonNeg=$subj_work_dir/${subj}_nonNeg_T1w.nii.gz
+
+# Step 2
+T1w_roughN4_nii=$subj_work_dir/${subj}_rough-N4_T1w.nii.gz
+T1w_roughN4_mnc=$subj_work_dir/${subj}_rough-N4_T1w.mnc
+
+# Step 3
+T1w_icbm_mnc=$subj_work_dir/${subj}_icbm_T1w.mnc
+T1w_to_icbm_xfm=$subj_work_dir/${subj}_T1w-to-icbm_affine.xfm
+
+# Step 4
+BEAST_icbm_brainmask_mnc=$subj_work_dir/${subj}_BEAST-icbm_brainmask.mnc
+
+# Step 5
+BEAST_native_brainmask_mnc=$subj_work_dir/${subj}_BEAST-native_brainmask.mnc
+BEAST_native_brainmask_nii=$subj_work_dir/${subj}_BEAST-native_brainmask.nii
+BEAST_native_brainmask_nii_gz=$subj_work_dir/${subj}_BEAST-native_brainmask.nii.gz
+
+# Step 6
+BEAST_icbm_ss_brainmask_mnc=$subj_work_dir/${subj}_BEAST-icbm_ss_brainmask.mnc
+BEAST_icbm_brainmask_nii=$subj_work_dir/${subj}_BEAST-icbm_brainmask.nii
+BEAST_icbm_brainmask_nii_gz=$subj_work_dir/${subj}_BEAST-icbm_brainmask.nii.gz
+T1w_ss_icbm_mnc=$subj_work_dir/${subj}_icbm_ss_T1w.mnc
+T1w_icbm_nii=$subj_work_dir/${subj}_icbm_T1w.nii
+T1w_icbm_nii_gz=$subj_work_dir/${subj}_icbm_T1w.nii.gz
+
+# Step 7
+T1w_N4_mask=$subj_work_dir/${subj}_nonNeg_N4_T1w.nii.gz
+T1w_biasfield=$subj_work_dir/${subj}_T1w_biasfield.nii.gz
+T1w_N4=$subj_work_dir/${subj}_N4_T1w.nii.gz
+
+# Step 8
+T1w_N4_brain=$subj_work_dir/${subj}_N4_brain-T1w.nii.gz
+
+
+# Final OUTPUT (TODO: better BIDS derivatives compliance)
+FINAL_T1w_native_brain=$subj_final_dir/${subj}_acq-MP2RAGE_T1w_N4_brain.nii.gz
+FINAL_T1w_native_N4=$subj_final_dir/${subj}_acq-MP2RAGE_N4_T1w.nii.gz
+FINAL_T1w_icbm=$subj_final_dir/${subj}_acq-MP2RAGE_target-icbm_T1w.nii.gz
+FINAL_T1w_native_brainmask=$subj_final_dir/${subj}_acq-MP2RAGE_T1w_native_BEAST_brainmask.nii.gz
+FINAL_T1w_icbm_brainmask=$subj_final_dir/${subj}_acq-MP2RAGE_T1w_icbm_BEAST_brainmask.nii.gz
+FINAL_T1w_to_icbm_xfm=$subj_final_dir/${subj}_T1w-to-icbm_affine.xfm
+
+
+#####################################################################################
+
+
+# Step 1. remove negative voxels due to interpolation
+echo "Step 1. remove negative voxels due to potential previous interpolation"
+fslmaths $N_T1w -thr 0 $T1w_thr0
+ImageMath 3 $T1w_nonNeg InPaint $T1w_thr0 3
+
+# Step 2. Image inhomogeneity correction
+echo "Step 2. Image inhomogeneity correction"
+N4BiasFieldCorrection -d 3 -v -b [200] -s 4 -r 0 -c [600x500x500x400x200,0] -i $T1w_nonNeg -o $T1w_roughN4_nii
+nii2mnc $T1w_roughN4_nii $T1w_roughN4_mnc
+
+# Step 3. Transform to Talariach space
+# The script path needs to be in $PATH
+echo "Step 3. Transform to Talariach space"
+${execpath}/bin/beast_normalize2.sh $T1w_roughN4_mnc $T1w_icbm_mnc $T1w_to_icbm_xfm -modeldir $template_PATH
+
+# Step 4. Skull stripping
+echo "Step 4. Skull stripping"
+mincbeast -fill -median -conf $BEAST_PATH/default.1mm.conf $BEAST_PATH $T1w_icbm_mnc $BEAST_icbm_brainmask_mnc
+
+# Step 5. resample the masks back to native space
+echo "Step 5. resample the masks back to native space"
+itk_resample $BEAST_icbm_brainmask_mnc $BEAST_native_brainmask_mnc --labels --clobber --like $T1w_roughN4_mnc --transform $T1w_to_icbm_xfm --invert_transform --short
+mnc2nii -short -nii $BEAST_native_brainmask_mnc  $BEAST_native_brainmask_nii
+gzip $BEAST_native_brainmask_nii
+
+# Step 6. convert back to .nii format
+echo "Step 6. Convert to NiFTI format"
+mincreshape -short -signed $BEAST_icbm_brainmask_mnc $BEAST_icbm_ss_brainmask_mnc
+mnc2nii -short -nii $BEAST_icbm_ss_brainmask_mnc $BEAST_icbm_brainmask_nii
+gzip $BEAST_icbm_brainmask_nii
+rm $BEAST_icbm_ss_brainmask_mnc
+
+mincreshape -short -signed $T1w_icbm_mnc $T1w_ss_icbm_mnc
+mnc2nii -short -nii $T1w_ss_icbm_mnc $T1w_icbm_nii
+gzip $T1w_icbm_nii
+rm $T1w_ss_icbm_mnc
+
+# Step 7. Refine N4 correction with obained mask
+echo "Step 7. Refine N4 correction with obained mask"
+N4BiasFieldCorrection -d 3 -i $T1w_roughN4_nii -o [$T1w_N4_mask,$T1w_biasfield] -b [250] -r 0 -s 4 -c [600x500x500x400x200,1e-5] -v -x $BEAST_native_brainmask_nii_gz
+ImageMath 3 $T1w_N4 / $T1w_roughN4_nii $T1w_biasfield
+
+# Step 8. Apply the brain mask to the native T1w scan
+echo "Step 8. Apply the brain mask to the native N4-corrected T1w scan"
+ImageMath 3 $T1w_N4_brain m $T1w_N4 $BEAST_native_brainmask_nii_gz
+
+######################################################################################
+# final file copies
+######################################################################################
+
+echo "Step 8. Copy processing results to output folder and clean up"
+yes | cp -rf $T1w_icbm_nii $FINAL_T1w_icbm
+yes | cp -rf $BEAST_icbm_brainmask_nii_gz $FINAL_T1w_icbm_brainmask
+yes | cp -rf $T1w_to_icbm_xfm $FINAL_T1w_to_icbm_xfm
+yes | cp -rf $BEAST_native_brainmask_nii_gz $FINAL_T1w_native_brainmask
+yes | cp -rf $T1w_N4 $FINAL_T1w_native_N4
+yes | cp -rf $T1w_N4_brain $FINAL_T1w_native_brain
+
+# TODO: clean up, flag to remove working directory (or not)
+
+done
+
+popd
+
+exit 0
