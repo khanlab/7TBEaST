@@ -161,7 +161,6 @@ derivatives=$out_folder #bids derivatives
 echo mkdir -p $work_folder $derivatives
 mkdir -p $work_folder $derivatives
 
-pushd $work_folder
 echo $participants
 
 
@@ -270,7 +269,7 @@ FINAL_T1w_to_icbm_xfm=$subj_final_dir/${subj}_T1w-to-icbm_affine.xfm
 
 # Step 1. remove negative voxels due to interpolation
 echo "Step 1. remove negative voxels due to potential previous interpolation"
-fslmaths $N_T1w -thr 0 $T1w_thr0
+fslmaths $T1w -thr 0 $T1w_thr0
 ImageMath 3 $T1w_nonNeg InPaint $T1w_thr0 3
 
 # Step 2. Image inhomogeneity correction
@@ -330,6 +329,5 @@ yes | cp -rf $T1w_N4_brain $FINAL_T1w_native_brain
 
 done
 
-popd
 
 exit 0
