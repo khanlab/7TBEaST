@@ -161,6 +161,17 @@ derivatives=$out_folder #bids derivatives
 echo mkdir -p $work_folder $derivatives
 mkdir -p $work_folder $derivatives
 
+if [ ! -e $participants ]
+then
+    #participants tsv not required by bids, so if it doesn't exist, create one for temporary use
+    participants=$work_folder/participants.tsv
+    echo participant_id > $participants
+    pushd $in_bids
+    ls -d sub-* >> $participants
+    popd 
+fi
+
+
 echo $participants
 
 
@@ -195,18 +206,38 @@ then
   subj="sub-$subj"
 fi
 
-subj_work_dir=$work_folder/$subj/
-subj_final_dir=$derivatives/$subj/anat
+    #loop over sub- and sub-/ses-
+    for subjfolder in `ls -d $in_bids/$subj/anat $in_bids/$subj/ses-*/anat`
+    do
+        subj_sess_dir=${subjfolder%/anat}
+        subj_sess_dir=${subj_sess_dir##$in_bids/}
+        if echo $subj_sess_dir | grep -q '/'
+        then
+            sess=${subj_sess_dir##*/}
+            subj_sess_prefix=${subj}_${sess}
+        else
+            subj_sess_prefix=${subj}
+        fi
+        echo subjfolder $subjfolder
+        echo subj_sess_dir $subj_sess_dir
+        echo sess $sess
+        echo subj_sess_prefix $subj_sess_prefix
 
-mkdir -p $subj_work_dir # for intermediate files
+
+
+
+subj_work_dir=$work_folder/$subj_sess_dir
+subj_final_dir=$derivatives/$subj_sess_dir/anat
+
+mkdir -p ${subj_work_dir} # for intermediate files
 mkdir -p $subj_final_dir # for final output
 
 # Input T1w
-N_T1w=`eval ls $in_bids/$subj/anat/${subj}${searchstring_T1w} | wc -l`
-T1w=`eval ls $in_bids/$subj/anat/${subj}${searchstring_T1w} | head -n 1` # default is the first in the list
+N_T1w=`eval ls $in_bids/$subj_sess_dir/anat/${subj_sess_prefix}${searchstring_T1w} | wc -l`
+T1w=`eval ls $in_bids/$subj_sess_dir/anat/${subj_sess_prefix}${searchstring_T1w} | head -n 1` # default is the first in the list
 echo N_T1w=$N_T1w
 echo Found $N_T1w matching T1w, using all:
-eval ls $in_bids/$subj/anat/${subj}${searchstring_T1w}
+eval ls $in_bids/$subj_sess_dir/anat/${subj_sess_prefix}${searchstring_T1w}
 
 
 
@@ -219,49 +250,49 @@ eval ls $in_bids/$subj/anat/${subj}${searchstring_T1w}
 #############
 
 # Step 1
-T1w_thr0=$subj_work_dir/${subj}_thr0_T1w.nii.gz
-T1w_nonNeg=$subj_work_dir/${subj}_nonNeg_T1w.nii.gz
+T1w_thr0=${subj_work_dir}/${subj_sess_prefix}_thr0_T1w.nii.gz
+T1w_nonNeg=${subj_work_dir}/${subj_sess_prefix}_nonNeg_T1w.nii.gz
 
 # Step 2
-T1w_roughN4_nii=$subj_work_dir/${subj}_rough-N4_T1w.nii.gz
-T1w_roughN4_mnc=$subj_work_dir/${subj}_rough-N4_T1w.mnc
+T1w_roughN4_nii=${subj_work_dir}/${subj_sess_prefix}_rough-N4_T1w.nii.gz
+T1w_roughN4_mnc=${subj_work_dir}/${subj_sess_prefix}_rough-N4_T1w.mnc
 
 # Step 3
-T1w_icbm_mnc=$subj_work_dir/${subj}_icbm_T1w.mnc
-T1w_to_icbm_xfm=$subj_work_dir/${subj}_T1w-to-icbm_affine.xfm
+T1w_icbm_mnc=${subj_work_dir}/${subj_sess_prefix}_icbm_T1w.mnc
+T1w_to_icbm_xfm=${subj_work_dir}/${subj_sess_prefix}_T1w-to-icbm_affine.xfm
 
 # Step 4
-BEAST_icbm_brainmask_mnc=$subj_work_dir/${subj}_BEAST-icbm_brainmask.mnc
+BEAST_icbm_brainmask_mnc=${subj_work_dir}/${subj_sess_prefix}_BEAST-icbm_brainmask.mnc
 
 # Step 5
-BEAST_native_brainmask_mnc=$subj_work_dir/${subj}_BEAST-native_brainmask.mnc
-BEAST_native_brainmask_nii=$subj_work_dir/${subj}_BEAST-native_brainmask.nii
-BEAST_native_brainmask_nii_gz=$subj_work_dir/${subj}_BEAST-native_brainmask.nii.gz
+BEAST_native_brainmask_mnc=${subj_work_dir}/${subj_sess_prefix}_BEAST-native_brainmask.mnc
+BEAST_native_brainmask_nii=${subj_work_dir}/${subj_sess_prefix}_BEAST-native_brainmask.nii
+BEAST_native_brainmask_nii_gz=${subj_work_dir}/${subj_sess_prefix}_BEAST-native_brainmask.nii.gz
 
 # Step 6
-BEAST_icbm_ss_brainmask_mnc=$subj_work_dir/${subj}_BEAST-icbm_ss_brainmask.mnc
-BEAST_icbm_brainmask_nii=$subj_work_dir/${subj}_BEAST-icbm_brainmask.nii
-BEAST_icbm_brainmask_nii_gz=$subj_work_dir/${subj}_BEAST-icbm_brainmask.nii.gz
-T1w_ss_icbm_mnc=$subj_work_dir/${subj}_icbm_ss_T1w.mnc
-T1w_icbm_nii=$subj_work_dir/${subj}_icbm_T1w.nii
-T1w_icbm_nii_gz=$subj_work_dir/${subj}_icbm_T1w.nii.gz
+BEAST_icbm_ss_brainmask_mnc=${subj_work_dir}/${subj_sess_prefix}_BEAST-icbm_ss_brainmask.mnc
+BEAST_icbm_brainmask_nii=${subj_work_dir}/${subj_sess_prefix}_BEAST-icbm_brainmask.nii
+BEAST_icbm_brainmask_nii_gz=${subj_work_dir}/${subj_sess_prefix}_BEAST-icbm_brainmask.nii.gz
+T1w_ss_icbm_mnc=${subj_work_dir}/${subj_sess_prefix}_icbm_ss_T1w.mnc
+T1w_icbm_nii=${subj_work_dir}/${subj_sess_prefix}_icbm_T1w.nii
+T1w_icbm_nii_gz=${subj_work_dir}/${subj_sess_prefix}_icbm_T1w.nii.gz
 
 # Step 7
-T1w_N4_mask=$subj_work_dir/${subj}_nonNeg_N4_T1w.nii.gz
-T1w_biasfield=$subj_work_dir/${subj}_T1w_biasfield.nii.gz
-T1w_N4=$subj_work_dir/${subj}_N4_T1w.nii.gz
+T1w_N4_mask=${subj_work_dir}/${subj_sess_prefix}_nonNeg_N4_T1w.nii.gz
+T1w_biasfield=${subj_work_dir}/${subj_sess_prefix}_T1w_biasfield.nii.gz
+T1w_N4=${subj_work_dir}/${subj_sess_prefix}_N4_T1w.nii.gz
 
 # Step 8
-T1w_N4_brain=$subj_work_dir/${subj}_N4_brain-T1w.nii.gz
+T1w_N4_brain=${subj_work_dir}/${subj_sess_prefix}_N4_brain-T1w.nii.gz
 
 
 # Final OUTPUT (TODO: better BIDS derivatives compliance)
-FINAL_T1w_native_brain=$subj_final_dir/${subj}_acq-MP2RAGE_T1w_N4_brain.nii.gz
-FINAL_T1w_native_N4=$subj_final_dir/${subj}_acq-MP2RAGE_N4_T1w.nii.gz
-FINAL_T1w_icbm=$subj_final_dir/${subj}_acq-MP2RAGE_target-icbm_T1w.nii.gz
-FINAL_T1w_native_brainmask=$subj_final_dir/${subj}_acq-MP2RAGE_T1w_native_BEAST_brainmask.nii.gz
-FINAL_T1w_icbm_brainmask=$subj_final_dir/${subj}_acq-MP2RAGE_T1w_icbm_BEAST_brainmask.nii.gz
-FINAL_T1w_to_icbm_xfm=$subj_final_dir/${subj}_T1w-to-icbm_affine.xfm
+FINAL_T1w_native_brain=${subj_final_dir}/${subj_sess_prefix}_acq-MP2RAGE_T1w_N4_brain.nii.gz
+FINAL_T1w_native_N4=${subj_final_dir}/${subj_sess_prefix}_acq-MP2RAGE_N4_T1w.nii.gz
+FINAL_T1w_icbm=${subj_final_dir}/${subj_sess_prefix}_acq-MP2RAGE_target-icbm_T1w.nii.gz
+FINAL_T1w_native_brainmask=${subj_final_dir}/${subj_sess_prefix}_acq-MP2RAGE_T1w_native_BEAST_brainmask.nii.gz
+FINAL_T1w_icbm_brainmask=${subj_final_dir}/${subj_sess_prefix}_acq-MP2RAGE_T1w_icbm_BEAST_brainmask.nii.gz
+FINAL_T1w_to_icbm_xfm=${subj_final_dir}/${subj_sess_prefix}_T1w-to-icbm_affine.xfm
 
 
 #####################################################################################
@@ -327,6 +358,7 @@ yes | cp -rf $T1w_N4_brain $FINAL_T1w_native_brain
 
 # TODO: clean up, flag to remove working directory (or not)
 
+done
 done
 
 
