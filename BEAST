@@ -291,7 +291,7 @@ FINAL_T1w_native_N4=${subj_final_dir}/${subj_sess_prefix}_${filetags}_desc-N4_T1
 FINAL_T1w_icbm=${subj_final_dir}/${subj_sess_prefix}_${filetags}_space-MNI152NLin2009cAsym_T1w.nii.gz
 FINAL_T1w_native_brainmask=${subj_final_dir}/${subj_sess_prefix}_${filetags}_desc-BEAST_T1w_brainmask.nii.gz
 FINAL_T1w_icbm_brainmask=${subj_final_dir}/${subj_sess_prefix}_${filetags}_space-MNI152NLin2009cAsym_T1w_brainmask.nii.gz
-FINAL_T1w_to_icbm_xfm=${subj_final_dir}/${subj_sess_prefix}_from-orig_to-MNI152NLin2009cAsymT1w_affine.xfm
+FINAL_T1w_to_icbm_xfm=${subj_final_dir}/${subj_sess_prefix}_${filetages}_from-orig_to-MNI152NLin2009cAsymT1w_affine.xfm
 
 
 #####################################################################################
@@ -348,7 +348,7 @@ ImageMath 3 $T1w_N4_brain m $T1w_N4 $BEAST_native_brainmask_nii_gz
 ######################################################################################
 
 echo "Step 8. Copy processing results to output folder and clean up"
-yes | cp -rf $T1w_icbm_nii $FINAL_T1w_icbm
+yes | cp -rf $T1w_icbm_nii_gz $FINAL_T1w_icbm
 yes | cp -rf $BEAST_icbm_brainmask_nii_gz $FINAL_T1w_icbm_brainmask
 yes | cp -rf $T1w_to_icbm_xfm $FINAL_T1w_to_icbm_xfm
 yes | cp -rf $BEAST_native_brainmask_nii_gz $FINAL_T1w_native_brainmask
