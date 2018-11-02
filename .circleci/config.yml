@@ -37,17 +37,9 @@ jobs:
           name: Running basic T1w test
           command: |
               export DOCKER_NAME=$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME:latest
-              mkdir t1w_testdata
-              wget -qO- https://www.dropbox.com/s/dp238bmdkowj35q/t1w.tar | tar xv -C t1w_testdata
-              #copy test data to a dummy container
-              docker create -v /data --name testdata alpine:3.4 /bin/true
-              docker cp t1w_testdata testdata:/data
-              docker run --name testapp -it --volumes-from testdata $DOCKER_NAME /data/t1w_testdata /out participant
-              #copy output data from dummy container
-              docker cp testapp:/out test_out
+              ./circleci/bidsDocker $DOCKER_NAME https://www.dropbox.com/s/dp238bmdkowj35q/t1w.tar out participant
               #check if brain image was generated:
-              test -f test_out/sub-001/anat/sub-001_desc-BEAST_T1w_brain.nii.gz
-
+              test -f out/sub-001/anat/sub-001_desc-BEAST_T1w_brain.nii.gz
 
   deploy_dev:
     docker:

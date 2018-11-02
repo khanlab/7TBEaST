@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if [ "$#" -lt 4 ]
+then
+	echo "Usage: $0 <docker_app_name> <bids_test_data_url> <out folder> <analysis_level> <opt args...>"
+#	exit 1
+fi
+
+DOCKER_NAME=$1
+TESTDATA_URL=$2
+OUT_FOLDER=$3
+ANALYSIS_LEVEL=$4
+
+shift 4
+
+OPTARGS=$@
+
+#TESTDATA_URL=https://www.dropbox.com/s/dp238bmdkowj35q/t1w.tar
+#DOCKER_NAME=khanlab/beast:latest
+#ANALYSIS_LEVEL=participant
+
+mkdir -p bids $OUT_FOLDER
+wget -qO- $TESTDATA_URL | tar xv -C bids
+docker run --rm -v `pwd`/bids:/bids:ro -v `pwd`/$OUT_FOLDER:/out -it $DOCKER_NAME /bids /out $ANALYSIS_LEVEL  $OPTARGS

@@ -233,10 +233,8 @@ T1w=`eval ls $in_bids/$subj_sess_dir/anat/${subj_sess_prefix}${searchstring_T1w}
 echo N_T1w=$N_T1w
 echo Found $N_T1w matching T1w, using first one: $T1w
 
-filetags=${T1w##$in_bids/$subj_sess_dir/anat/${subj_sess_prefix}_}
+filetags=${T1w##*/${subj_sess_prefix}}
 filetags=${filetags%%_T1w.nii*}
-
-
 
 
 
@@ -286,13 +284,19 @@ T1w_N4_brain=${subj_work_dir}/${subj_sess_prefix}_N4_brain-T1w.nii.gz
 
 
 # Final OUTPUT (note: brain and brainmask suffixes not BIDS Derivatives compliant, but prepdwi uses *T1w_brain.nii.gz)
-FINAL_T1w_native_brain=${subj_final_dir}/${subj_sess_prefix}_${filetags}_desc-BEAST_T1w_brain.nii.gz
-FINAL_T1w_native_N4=${subj_final_dir}/${subj_sess_prefix}_${filetags}_desc-N4_T1w.nii.gz
-FINAL_T1w_icbm=${subj_final_dir}/${subj_sess_prefix}_${filetags}_space-MNI152NLin2009cAsym_T1w.nii.gz
-FINAL_T1w_native_brainmask=${subj_final_dir}/${subj_sess_prefix}_${filetags}_desc-BEAST_T1w_brainmask.nii.gz
-FINAL_T1w_icbm_brainmask=${subj_final_dir}/${subj_sess_prefix}_${filetags}_space-MNI152NLin2009cAsym_T1w_brainmask.nii.gz
-FINAL_T1w_to_icbm_xfm=${subj_final_dir}/${subj_sess_prefix}_${filetages}_from-orig_to-MNI152NLin2009cAsymT1w_affine.xfm
+FINAL_T1w_native_brain=${subj_final_dir}/${subj_sess_prefix}${filetags}_desc-BEAST_T1w_brain.nii.gz
+FINAL_T1w_native_N4=${subj_final_dir}/${subj_sess_prefix}${filetags}_desc-N4_T1w.nii.gz
+FINAL_T1w_icbm=${subj_final_dir}/${subj_sess_prefix}${filetags}_space-MNI152NLin2009cAsym_T1w.nii.gz
+FINAL_T1w_native_brainmask=${subj_final_dir}/${subj_sess_prefix}${filetags}_desc-BEAST_T1w_brainmask.nii.gz
+FINAL_T1w_icbm_brainmask=${subj_final_dir}/${subj_sess_prefix}${filetags}_space-MNI152NLin2009cAsym_T1w_brainmask.nii.gz
+FINAL_T1w_to_icbm_xfm=${subj_final_dir}/${subj_sess_prefix}${filetages}_from-orig_to-MNI152NLin2009cAsymT1w_affine.xfm
 
+echo FINAL_T1w_native_brain $FINAL_T1w_native_brain
+echo FINAL_T1w_native_N4 $FINAL_T1w_native_N4
+echo FINAL_T1w_icbm $FINAL_T1w_icbm
+echo FINAL_T1w_native_brainmask $FINAL_T1w_native_brainmask
+echo FINAL_T1w_icbm_brainmask $FINAL_T1w_icbm_brainmask
+echo FINAL_T1w_to_icbm_xfm $FINAL_T1w_to_icbm_xfm
 
 #####################################################################################
 
