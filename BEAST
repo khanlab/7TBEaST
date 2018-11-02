@@ -178,10 +178,8 @@ echo $participants
 if [ -n "$matching_T1w" ]
 then
   searchstring_T1w=\*${matching_T1w}\*MP2RAGE*T1w.nii*
-  searchstring_T1w_brainmask=\*${matching_T1w}\*MP2RAGE*T1w_brainmask.nii*
 else
-  searchstring_T1w=*MP2RAGE*T1w.nii*
-  searchstring_T1w_brainmask=*MP2RAGE*T1w_brainmask.nii*
+  searchstring_T1w=*T1w.nii*
 fi
 
 if [ -n "$participant_label" ]
@@ -236,8 +234,12 @@ mkdir -p $subj_final_dir # for final output
 N_T1w=`eval ls $in_bids/$subj_sess_dir/anat/${subj_sess_prefix}${searchstring_T1w} | wc -l`
 T1w=`eval ls $in_bids/$subj_sess_dir/anat/${subj_sess_prefix}${searchstring_T1w} | head -n 1` # default is the first in the list
 echo N_T1w=$N_T1w
-echo Found $N_T1w matching T1w, using all:
-eval ls $in_bids/$subj_sess_dir/anat/${subj_sess_prefix}${searchstring_T1w}
+echo Found $N_T1w matching T1w, using first one: $T1w
+
+filetags=${T1w##$in_bids/$subj_sess_dir/anat/${subj_sess_prefix}_}
+filetags=${filetags%%_T1w.nii*}
+
+
 
 
 
@@ -286,13 +288,13 @@ T1w_N4=${subj_work_dir}/${subj_sess_prefix}_N4_T1w.nii.gz
 T1w_N4_brain=${subj_work_dir}/${subj_sess_prefix}_N4_brain-T1w.nii.gz
 
 
-# Final OUTPUT (TODO: better BIDS derivatives compliance)
-FINAL_T1w_native_brain=${subj_final_dir}/${subj_sess_prefix}_acq-MP2RAGE_T1w_N4_brain.nii.gz
-FINAL_T1w_native_N4=${subj_final_dir}/${subj_sess_prefix}_acq-MP2RAGE_N4_T1w.nii.gz
-FINAL_T1w_icbm=${subj_final_dir}/${subj_sess_prefix}_acq-MP2RAGE_target-icbm_T1w.nii.gz
-FINAL_T1w_native_brainmask=${subj_final_dir}/${subj_sess_prefix}_acq-MP2RAGE_T1w_native_BEAST_brainmask.nii.gz
-FINAL_T1w_icbm_brainmask=${subj_final_dir}/${subj_sess_prefix}_acq-MP2RAGE_T1w_icbm_BEAST_brainmask.nii.gz
-FINAL_T1w_to_icbm_xfm=${subj_final_dir}/${subj_sess_prefix}_T1w-to-icbm_affine.xfm
+# Final OUTPUT (note: brain and brainmask suffixes not BIDS Derivatives compliant, but prepdwi uses *T1w_brain.nii.gz)
+FINAL_T1w_native_brain=${subj_final_dir}/${subj_sess_prefix}_${filetags}_desc-BEAST_T1w_brain.nii.gz
+FINAL_T1w_native_N4=${subj_final_dir}/${subj_sess_prefix}_${filetags}_desc-N4_T1w.nii.gz
+FINAL_T1w_icbm=${subj_final_dir}/${subj_sess_prefix}_${filetags}_space-MNI152NLin2009cAsym_T1w.nii.gz
+FINAL_T1w_native_brainmask=${subj_final_dir}/${subj_sess_prefix}_${filetags}_desc-BEAST_T1w_brainmask.nii.gz
+FINAL_T1w_icbm_brainmask=${subj_final_dir}/${subj_sess_prefix}_${filetags}_space-MNI152NLin2009cAsym_T1w_brainmask.nii.gz
+FINAL_T1w_to_icbm_xfm=${subj_final_dir}/${subj_sess_prefix}_from-orig_to-MNI152NLin2009cAsymT1w_affine.xfm
 
 
 #####################################################################################
