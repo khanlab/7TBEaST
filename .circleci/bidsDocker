@@ -21,7 +21,7 @@ OPTARGS=$@
 
 mkdir -p bids 
 wget -qO- $TESTDATA_URL | tar xv -C bids
-docker create -v /bids --name testdata alpine:3.4 /bin/true
+docker create -v /data --name testdata alpine:3.4 /bin/true
 docker cp bids testdata:/data
 docker run  --name testapp  --volumes-from testdata -it $DOCKER_NAME /data/bids /out $ANALYSIS_LEVEL  $OPTARGS
 docker cp testapp:/out $OUT_FOLDER
