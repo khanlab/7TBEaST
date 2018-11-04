@@ -19,6 +19,10 @@ OPTARGS=$@
 #DOCKER_NAME=khanlab/beast:latest
 #ANALYSIS_LEVEL=participant
 
-mkdir -p bids $OUT_FOLDER
+mkdir -p bids 
 wget -qO- $TESTDATA_URL | tar xv -C bids
-docker run --rm -v `pwd`/bids:/bids:ro -v `pwd`/$OUT_FOLDER:/out -it $DOCKER_NAME /bids /out $ANALYSIS_LEVEL  $OPTARGS
+docker create -v /bids --name testdata alpine:3.4 /bin/true
+docker cp bids testdata:/data
+docker run  --name testapp  --volumes-from testdata -it $DOCKER_NAME /data/bids /out $ANALYSIS_LEVEL  $OPTARGS
+docker cp testapp:/out $OUT_FOLDER
+
