@@ -249,6 +249,7 @@ filetags=${filetags%%_T1w.nii*}
 # Step 1
 T1w_thr0=${subj_work_dir}/${subj_sess_prefix}_thr0_T1w.nii.gz
 T1w_nonNeg=${subj_work_dir}/${subj_sess_prefix}_nonNeg_T1w.nii.gz
+T1w_nonNeg_mnc=${subj_work_dir}/${subj_sess_prefix}_nonNeg_T1w.mnc
 
 # Step 2
 T1w_roughN4_nii=${subj_work_dir}/${subj_sess_prefix}_rough-N4_T1w.nii.gz
@@ -308,12 +309,12 @@ ImageMath 3 $T1w_nonNeg InPaint $T1w_thr0 3
 
 # Step 2. Image inhomogeneity correction
 #echo "Step 2. Image inhomogeneity correction" - removed to improve stability
-nii2mnc $T1w_nonNeg $T1w_roughN4_mnc
+nii2mnc $T1w_nonNeg $T1w_nonNeg_mnc
 
 # Step 3. Transform to Talariach space
 # The script path needs to be in $PATH
 echo "Step 3. Transform to Talariach space"
-${execpath}/bin/beast_normalize2.sh $T1w_roughN4_mnc $T1w_icbm_mnc $T1w_to_icbm_xfm -modeldir $template_PATH
+${execpath}/bin/beast_normalize2.sh $T1w_nonNeg_mnc $T1w_icbm_mnc $T1w_to_icbm_xfm -modeldir $template_PATH
 
 # Step 4. Skull stripping
 echo "Step 4. Skull stripping"
