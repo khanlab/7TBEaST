@@ -309,6 +309,8 @@ ImageMath 3 $T1w_nonNeg InPaint $T1w_thr0 3
 
 # Step 2. Image inhomogeneity correction
 #echo "Step 2. Image inhomogeneity correction" - removed to improve stability
+N4BiasFieldCorrection -d 3 -v -b [200] -s 4 -r 0 -c [600x500x500x400x200,0] -i $T1w_nonNeg -o $T1w_roughN4_nii
+nii2mnc $T1w_roughN4_nii $T1w_roughN4_mnc
 nii2mnc $T1w_nonNeg $T1w_nonNeg_mnc
 
 # Step 3. Transform to Talariach space
